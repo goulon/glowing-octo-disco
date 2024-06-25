@@ -37,8 +37,8 @@ module.exports = (logSources, printer) => {
 };
 
 // About my solution
-// For k log sources entries and n entries
-// Efficiency: O(log n) for insertion and extraction due to MinHeap.
+// For k log sources and n total entries across all sources
+// Efficiency: O(log k) for insertion and extraction due to MinHeap.
 // Scalability: Memory scales with sources not entries.
 // Time Complexity: O(n log k).
 // Space Complexity: O(k), only needs space for heap proportional to number of sources.
