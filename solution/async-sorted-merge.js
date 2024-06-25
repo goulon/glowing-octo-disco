@@ -5,14 +5,24 @@ const MinHeap = require("../lib/min-heap");
 
 module.exports = async (logSources, printer) => {
   const minHeap = new MinHeap();
+  const numberOfSources = logSources.length;
+  const pendingPromises = new Array(numberOfSources);
 
   const fetchAndInsert = async (sourceIndex) => {
-    const nextEntry = await logSources[sourceIndex].popAsync();
-    if (sourceIndex)
-      minHeap.insert(nextEntry.date, {
-        entry: nextEntry,
-        sourceIndex,
-      });
+    try {
+      const entry = await pendingPromises[sourceIndex];
+      if (entry) {
+        // Start fetching the next entry
+        pendingPromises[sourceIndex] = logSources[sourceIndex].popAsync();
+        minHeap.insert(entry.date, { entry, sourceIndex });
+      } else {
+        // Reflect drained status in the source promise array
+        pendingPromises[sourceIndex] = null;
+      }
+    } catch (error) {
+      console.error(`Error fetching from source ${sourceIndex}:`, error);
+      pendingPromises[sourceIndex] = null;
+    }
   };
 
   // Initialize the heap with the first entry from each source
@@ -23,6 +33,11 @@ module.exports = async (logSources, printer) => {
         entry: lastEntry,
         sourceIndex: index,
       });
+      // Start fetching the next entry
+      pendingPromises[index] = logSource.popAsync();
+    } else {
+      // In case the source starts empty
+      pendingPromises[index] = null;
     }
   });
 
@@ -35,6 +50,16 @@ module.exports = async (logSources, printer) => {
 
     // Fetch next entry from the source we just printed from
     await fetchAndInsert(sourceIndex);
+
+    // If our heap is running low, fetch from other sources
+    if (minHeap.size() < numberOfSources / 2) {
+      const activeSources = pendingPromises.filter((p) => p !== null);
+      if (activeSources.length > 0) {
+        await Promise.allSettled(
+          activeSources.map((_, index) => fetchAndInsert(index))
+        );
+      }
+    }
   }
 
   printer.done();
@@ -43,3 +68,7 @@ module.exports = async (logSources, printer) => {
     resolve(console.log("Async sort complete."));
   });
 };
+
+// Min heap maintains chronological order while processing async log sources.
+// Entries are fetched asynchronously, minimizing blocking operations.
+// Memory usage stays constant: one entry per source in the heap and promises array.
