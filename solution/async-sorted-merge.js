@@ -22,7 +22,7 @@ module.exports = async (logSources, printer) => {
       payload: { entry, sourceIndex },
     } = minHeap.extractMin();
     printer.print(entry);
-    const nextEntry = await logSources[sourceIndex].pop();
+    const nextEntry = await logSources[sourceIndex].popAsync();
     if (nextEntry)
       minHeap.insert(nextEntry.date, {
         entry: nextEntry,
