@@ -6,16 +6,14 @@ const MinHeap = require("../lib/min-heap");
 module.exports = async (logSources, printer) => {
   const minHeap = new MinHeap();
 
-  await Promise.all(
-    logSources.map(async (logSource, index) => {
-      const lastEntry = await logSource.last;
-      if (lastEntry)
-        minHeap.insert(lastEntry.date, {
-          entry: lastEntry,
-          sourceIndex: index,
-        });
-    })
-  );
+  logSources.forEach((logSource, index) => {
+    const lastEntry = logSource.last;
+    if (lastEntry)
+      minHeap.insert(lastEntry.date, {
+        entry: lastEntry,
+        sourceIndex: index,
+      });
+  });
 
   while (minHeap.size()) {
     const {
